@@ -1,0 +1,7 @@
+LEER A
+LEER B
+SI A > B ENTONCES
+    C = A - B
+SINO
+    C = B - A
+IMPRIMIR C
