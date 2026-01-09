@@ -26,6 +26,13 @@ def _recolectar_simbolos(operaciones: List[Dict[str, Any]]) -> Tuple[set, Dict[i
             agregar_token(op["destino"])
             agregar_token(op["izquierda"])
             agregar_token(op["derecha"])
+            if op.get("op") == "*":
+                # Temporal para multiplicación y constantes 0 y 1
+                conjunto_vars.add("TMPMUL")
+                if 0 not in constantes:
+                    constantes[0] = "CTE0"
+                if 1 not in constantes:
+                    constantes[1] = "CTE1"
         elif t == "si":
             agregar_token(op["condicion"]["izquierda"])
             agregar_token(op["condicion"]["derecha"])
@@ -51,9 +58,50 @@ def _gen_asignacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]
     lineas.append(f"LDA {_etiqueta_mem(op['izquierda'], constantes)}")
     if op["op"] == "+":
         lineas.append(f"ADD {_etiqueta_mem(op['derecha'], constantes)}")
-    else:
+    elif op["op"] == "-":
         lineas.append(f"SUB {_etiqueta_mem(op['derecha'], constantes)}")
+    else:  # '*' manejado fuera
+        return []
     lineas.append(f"STA {_etiqueta_mem(op['destino'], constantes)}")
+    return lineas
+
+
+def _gen_multiplicacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
+    destino = _etiqueta_mem(op['destino'], constantes)
+    izq = _etiqueta_mem(op['izquierda'], constantes)  # multiplicando
+    der = _etiqueta_mem(op['derecha'], constantes)    # multiplicador
+
+    # Asegurar CTE0 y CTE1
+    if 0 not in constantes:
+        constantes[0] = "CTE0"
+    if 1 not in constantes:
+        constantes[1] = "CTE1"
+
+    tmp = "TMPMUL"
+    # Etiquetas únicas
+    idx = _gen_op._ix_etq
+    etq_loop = f"MULT{idx}"
+    etq_fin = f"FINMULT{idx}"
+    _gen_op._ix_etq += 1
+
+    lineas: List[str] = []
+    # destino = 0
+    lineas.append(f"LDA {constantes[0]}")
+    lineas.append(f"STA {destino}")
+    # tmp = der
+    lineas.append(f"LDA {der}")
+    lineas.append(f"STA {tmp}")
+    # loop
+    lineas.append(f"{etq_loop} LDA {tmp}")
+    lineas.append(f"BRZ {etq_fin}")
+    lineas.append(f"LDA {destino}")
+    lineas.append(f"ADD {izq}")
+    lineas.append(f"STA {destino}")
+    lineas.append(f"LDA {tmp}")
+    lineas.append(f"SUB {constantes[1]}")
+    lineas.append(f"STA {tmp}")
+    lineas.append(f"BRA {etq_loop}")
+    lineas.append(f"{etq_fin} LDA {destino}")  # etiqueta de fin (no cambia valor)
     return lineas
 
 
@@ -111,11 +159,82 @@ def _gen_si(op: Dict[str, Any], indice_etq: int, constantes: Dict[int, str]) -> 
                     primero = False
                 lineas.extend(gen)
         _gen_op._etiquetas_pendientes.append(etq_finsi)
-    else:  # '='
+    elif cmp == "=":
         lineas.append(f"LDA {izquierda}")
         lineas.append(f"SUB {derecha}")
         lineas.append(f"BRZ {etq_entonces}")
         lineas.append(f"BRA {etq_sino}")
+        primero = True
+        for interior in op["entonces"]:
+            gen = _gen_op(interior, constantes)
+            if gen:
+                if primero:
+                    gen[0] = f"{etq_entonces} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        lineas.append(f"BRA {etq_finsi}")
+        primero = True
+        for interior in op["sino"]:
+            gen = _gen_op(interior, constantes)
+            if gen:
+                if primero:
+                    gen[0] = f"{etq_sino} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        _gen_op._etiquetas_pendientes.append(etq_finsi)
+    elif cmp == ">=":
+        lineas.append(f"LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_entonces}")
+        lineas.append(f"BRP {etq_entonces}")
+        lineas.append(f"BRA {etq_sino}")
+        primero = True
+        for interior in op["entonces"]:
+            gen = _gen_op(interior, constantes)
+            if gen:
+                if primero:
+                    gen[0] = f"{etq_entonces} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        lineas.append(f"BRA {etq_finsi}")
+        primero = True
+        for interior in op["sino"]:
+            gen = _gen_op(interior, constantes)
+            if gen:
+                if primero:
+                    gen[0] = f"{etq_sino} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        _gen_op._etiquetas_pendientes.append(etq_finsi)
+    elif cmp == "<=":
+        lineas.append(f"LDA {derecha}")
+        lineas.append(f"SUB {izquierda}")
+        lineas.append(f"BRZ {etq_entonces}")
+        lineas.append(f"BRP {etq_entonces}")
+        lineas.append(f"BRA {etq_sino}")
+        primero = True
+        for interior in op["entonces"]:
+            gen = _gen_op(interior, constantes)
+            if gen:
+                if primero:
+                    gen[0] = f"{etq_entonces} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        lineas.append(f"BRA {etq_finsi}")
+        primero = True
+        for interior in op["sino"]:
+            gen = _gen_op(interior, constantes)
+            if gen:
+                if primero:
+                    gen[0] = f"{etq_sino} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        _gen_op._etiquetas_pendientes.append(etq_finsi)
+    elif cmp == "!=":
+        lineas.append(f"LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_sino}")
+        lineas.append(f"BRA {etq_entonces}")
         primero = True
         for interior in op["entonces"]:
             gen = _gen_op(interior, constantes)
@@ -146,8 +265,14 @@ def _gen_op(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
         lineas = [f"LDA {_etiqueta_mem(op['var'], constantes)}", "OUT"]
         return _adjuntar_etiqueta_pendiente(lineas)
     if t == "asignacion":
-        lineas = _gen_asignacion(op, constantes)
-        return _adjuntar_etiqueta_pendiente(lineas)
+        if op["op"] == "*":
+            # Añadir tmp y constantes a símbolos para DAT
+            _gen_op._vars_tmp.add("TMPMUL")
+            lineas = _gen_multiplicacion(op, constantes)
+            return _adjuntar_etiqueta_pendiente(lineas)
+        else:
+            lineas = _gen_asignacion(op, constantes)
+            return _adjuntar_etiqueta_pendiente(lineas)
     if t == "si":
         lineas, nuevo_ix = _gen_si(op, _gen_op._ix_etq, constantes)
         _gen_op._ix_etq = nuevo_ix
@@ -156,6 +281,7 @@ def _gen_op(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
 
 _gen_op._ix_etq = 1
 _gen_op._etiquetas_pendientes = []
+_gen_op._vars_tmp = set()
 
 
 def _adjuntar_etiqueta_pendiente(lineas: List[str]) -> List[str]:
@@ -169,11 +295,14 @@ def generar_lmc(operaciones: List[Dict[str, Any]]) -> str:
     conjunto_vars, constantes = _recolectar_simbolos(operaciones)
     _gen_op._ix_etq = 1
     _gen_op._etiquetas_pendientes = []
+    _gen_op._vars_tmp = set()
     codigo: List[str] = []
     for op in operaciones:
         codigo.extend(_gen_op(op, constantes))
     codigo.append("HLT")
-    for v in sorted(conjunto_vars):
+    # Incluir temporales si se usaron
+    conjunto_total = set(conjunto_vars) | set(_gen_op._vars_tmp)
+    for v in sorted(conjunto_total):
         codigo.append(f"{v} DAT")
     for valor, etq in sorted(constantes.items()):
         codigo.append(f"{etq} DAT {valor}")

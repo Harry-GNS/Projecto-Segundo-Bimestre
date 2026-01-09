@@ -16,10 +16,11 @@ pip install -r requirements.txt
 - CLI:
 
 ```bash
-python src/main.py --input "input_scripts/ejemplo1.txt" --output "output_lmc/ejemplo1.lmc"
+python src/main.py --input "input_scripts/ejemplo1.txt" --dest Harry
 ```
 
-Si omites `--output`, el archivo se crea automáticamente en `output_lmc/`.
+- `--dest` (Harry/Juan/Anthony/Luis): guarda en `output_lmc/<dest>`.
+- Si omites `--output`, se genera automáticamente usando el nombre del input.
 
 - GUI:
 
@@ -30,5 +31,17 @@ python src/gui.py
 ## Carpetas
 
 - input_scripts/: archivos de entrada (.txt)
-- output_lmc/: resultados LMC (.lmc)
+- output_lmc/: resultados LMC (.lmc) por usuario
 - src/: código del transpilador
+
+## Qué soporta
+
+- Instrucciones: `LEER X`, `IMPRIMIR X`
+- Asignaciones: `Z = A + B`, `Z = A - 3`, `Z = A * B` (una operación por línea)
+- Condicionales: `SI A > B ENTONCES ... SINO ...`
+	- Comparadores: `>`, `<`, `=`, `>=`, `<=`, `!=`
+	- En `ENTONCES` y `SINO` se permiten `LEER`, `IMPRIMIR`, asignaciones y `SI` anidado simple
+
+Notas:
+- La multiplicación se implementa por sumas sucesivas (sin subrutinas externas).
+- Aún no soporta paréntesis/múltiples operaciones por asignación, bucles (`MIENTRAS/PARA`) ni división.

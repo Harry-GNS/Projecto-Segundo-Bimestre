@@ -5,11 +5,11 @@ Token = Dict[str, Any]
 
 
 def _es_asignacion(linea: str) -> bool:
-    return re.match(r"^\s*[A-Za-z][\w]*\s*=\s*(?:[A-Za-z][\w]*|\d+)\s*[+\-]\s*(?:[A-Za-z][\w]*|\d+)\s*$", linea) is not None
+    return re.match(r"^\s*[A-Za-z][\w]*\s*=\s*(?:[A-Za-z][\w]*|\d+)\s*[+\-*]\s*(?:[A-Za-z][\w]*|\d+)\s*$", linea) is not None
 
 
 def _parsear_asignacion(linea: str) -> Token:
-    m = re.match(r"^\s*([A-Za-z][\w]*)\s*=\s*([A-Za-z][\w]*|\d+)\s*([+\-])\s*([A-Za-z][\w]*|\d+)\s*$", linea)
+    m = re.match(r"^\s*([A-Za-z][\w]*)\s*=\s*([A-Za-z][\w]*|\d+)\s*([+\-*])\s*([A-Za-z][\w]*|\d+)\s*$", linea)
     assert m
     destino, izquierda, op, derecha = m.groups()
     return {"tipo": "asignacion", "destino": destino.upper(), "izquierda": izquierda.upper(), "op": op, "derecha": derecha.upper()}
@@ -34,11 +34,11 @@ def _parsear_imprimir(linea: str) -> Token:
 
 
 def _es_si(linea: str) -> bool:
-    return re.match(r"^\s*SI\s+\w+\s*(=|>|<)\s*\w+\s+ENTONCES\s*$", linea, re.IGNORECASE) is not None
+    return re.match(r"^\s*SI\s+\w+\s*(>=|<=|!=|=|>|<)\s*\w+\s+ENTONCES\s*$", linea, re.IGNORECASE) is not None
 
 
 def _parsear_encabezado_si(linea: str) -> Dict[str, str]:
-    m = re.match(r"^\s*SI\s+(\w+)\s*(=|>|<)\s*(\w+)\s+ENTONCES\s*$", linea, re.IGNORECASE)
+    m = re.match(r"^\s*SI\s+(\w+)\s*(>=|<=|!=|=|>|<)\s*(\w+)\s+ENTONCES\s*$", linea, re.IGNORECASE)
     assert m
     izquierda, op, derecha = m.groups()
     return {"izquierda": izquierda.upper(), "op": op, "derecha": derecha.upper()}
@@ -95,12 +95,23 @@ def analizar_pseudocodigo(lineas: List[str]) -> List[Token]:
                     interior = lineas[i].strip()
                     if not interior:
                         break
-                    if _es_si(interior) or _es_leer(interior) or _es_imprimir(interior):
-                        break
+                    if _es_leer(interior):
+                        sino_ops.append(_parsear_leer(interior))
+                        i += 1
+                        continue
+                    if _es_imprimir(interior):
+                        sino_ops.append(_parsear_imprimir(interior))
+                        i += 1
+                        continue
                     if _es_asignacion(interior):
                         sino_ops.append(_parsear_asignacion(interior))
                         i += 1
                         continue
+                    if _es_si(interior):
+                        anidado = analizar_pseudocodigo(lineas[i:])
+                        sino_ops.extend(anidado)
+                        i = n
+                        break
                     break
             tokens.append({"tipo": "si", "condicion": condicion, "entonces": entonces_ops, "sino": sino_ops})
             continue
