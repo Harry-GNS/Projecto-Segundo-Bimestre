@@ -12,3 +12,7 @@ estos no hace falta documentar solo es  para probar que si funciona.
 Guarden cada uno dentro de sus carpetas y con eso ya saben como funciona la LMC 
 y tmb repasen el codigo como funciona, pero porfavor esta vez si repasen para no 
 hablar solo yo XD.
+
+Se Corre el programa desde la GUI, no desde el Main, eso falta corregir pero no afecta 
+a el codigo importante, si alguno logra solucionar eso god, sino no importa
+
