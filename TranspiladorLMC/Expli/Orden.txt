@@ -4,4 +4,11 @@ En este archivo, cada prueba realizada debe documentarse de la siguiente manera:
 3. Se debe correr en  LMC y ver si coincide.
 Con que cada uno haga 2  entradas y dos salidas y le entienda fresco.
 
-3. Aparte de eso
+---
+
+3. Aparte de eso, vayan haciendo algunos inputs  y lo que les salga ponen en la LMC y ven si si funciona como deberia, 
+estos no hace falta documentar solo es  para probar que si funciona.
+
+Guarden cada uno dentro de sus carpetas y con eso ya saben como funciona la LMC 
+y tmb repasen el codigo como funciona, pero porfavor esta vez si repasen para no 
+hablar solo yo XD.
