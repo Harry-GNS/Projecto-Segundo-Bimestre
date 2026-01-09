@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
     QSplitter,
     QMessageBox,
     QStatusBar,
+    QComboBox,
 )
 
 from parser import parse_pseudocode
@@ -44,10 +45,16 @@ class MainWindow(QMainWindow):
         self.generate_btn.setDefault(True)
         self.generate_btn.clicked.connect(self.generate)
 
+        # Destino de guardado
+        self.dest_combo = QComboBox()
+        self.dest_combo.addItems(["Harry", "Juan", "Anthony", "Luis"])
+
         top_bar = QHBoxLayout()
         top_bar.addWidget(self.load_btn)
         top_bar.addWidget(QLabel("Nombre salida:"))
         top_bar.addWidget(self.output_name_edit, stretch=1)
+        top_bar.addWidget(QLabel("Guardar en:"))
+        top_bar.addWidget(self.dest_combo)
         top_bar.addWidget(self.generate_btn)
 
         # Editors in splitter
@@ -78,7 +85,9 @@ class MainWindow(QMainWindow):
         return os.path.dirname(os.path.dirname(__file__))
 
     def output_dir(self) -> str:
-        return os.path.join(self.project_root(), "output_lmc")
+        # Carpeta seleccionada por el usuario (Harry/Juan/Anthony/Luis) dentro de output_lmc
+        dest = self.dest_combo.currentText()
+        return os.path.join(self.project_root(), "output_lmc", dest)
 
     def load_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Selecciona .txt", self.project_root(), "Text Files (*.txt);;All Files (*.*)")

@@ -1,0 +1,7 @@
+En este archivo, cada prueba realizada debe documentarse de la siguiente manera: 
+1. se debe incluir el texto de entrada utilizado, acompañado de una explicación detallada sobre su significado y los resultados esperados.
+2. Para cada salida generada, se debe proporcionar una descripción que explique su propósito y funcionamiento.
+3. Se debe correr en  LMC y ver si coincide.
+Con que cada uno haga 2  entradas y dos salidas y le entienda fresco.
+
+3. Aparte de eso
