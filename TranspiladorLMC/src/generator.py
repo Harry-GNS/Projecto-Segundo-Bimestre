@@ -68,63 +68,107 @@ def _gen_if(op: Dict[str, Any], label_ix: int, consts: Dict[int, str]) -> Tuple[
         lines.append(f"SUB {right}")
         lines.append(f"BRZ {else_lbl}")
         lines.append(f"BRP {then_lbl}")
-        lines.append(f"{else_lbl}")
+        # ELSE block with inline label on first instruction
+        first = True
         for inner in op["else"]:
-            lines.extend(_gen_op(inner, consts))
+            gen = _gen_op(inner, consts)
+            if gen:
+                if first:
+                    gen[0] = f"{else_lbl} {gen[0]}"
+                    first = False
+                lines.extend(gen)
         lines.append(f"BRA {end_lbl}")
-        lines.append(f"{then_lbl}")
+        # THEN block with inline label on first instruction
+        first = True
         for inner in op["then"]:
-            lines.extend(_gen_op(inner, consts))
-        lines.append(f"{end_lbl}")
+            gen = _gen_op(inner, consts)
+            if gen:
+                if first:
+                    gen[0] = f"{then_lbl} {gen[0]}"
+                    first = False
+                lines.extend(gen)
+        # Mark end label to be attached to the next instruction emitted after the if
+        _gen_op._pending_labels.append(end_lbl)
     elif cmp == "<":
         lines.append(f"LDA {right}")
         lines.append(f"SUB {left}")
         lines.append(f"BRZ {else_lbl}")
         lines.append(f"BRP {then_lbl}")
-        lines.append(f"{else_lbl}")
+        first = True
         for inner in op["else"]:
-            lines.extend(_gen_op(inner, consts))
+            gen = _gen_op(inner, consts)
+            if gen:
+                if first:
+                    gen[0] = f"{else_lbl} {gen[0]}"
+                    first = False
+                lines.extend(gen)
         lines.append(f"BRA {end_lbl}")
-        lines.append(f"{then_lbl}")
+        first = True
         for inner in op["then"]:
-            lines.extend(_gen_op(inner, consts))
-        lines.append(f"{end_lbl}")
+            gen = _gen_op(inner, consts)
+            if gen:
+                if first:
+                    gen[0] = f"{then_lbl} {gen[0]}"
+                    first = False
+                lines.extend(gen)
+        _gen_op._pending_labels.append(end_lbl)
     else:  # '='
         lines.append(f"LDA {left}")
         lines.append(f"SUB {right}")
         lines.append(f"BRZ {then_lbl}")
         lines.append(f"BRA {else_lbl}")
-        lines.append(f"{then_lbl}")
+        first = True
         for inner in op["then"]:
-            lines.extend(_gen_op(inner, consts))
+            gen = _gen_op(inner, consts)
+            if gen:
+                if first:
+                    gen[0] = f"{then_lbl} {gen[0]}"
+                    first = False
+                lines.extend(gen)
         lines.append(f"BRA {end_lbl}")
-        lines.append(f"{else_lbl}")
+        first = True
         for inner in op["else"]:
-            lines.extend(_gen_op(inner, consts))
-        lines.append(f"{end_lbl}")
+            gen = _gen_op(inner, consts)
+            if gen:
+                if first:
+                    gen[0] = f"{else_lbl} {gen[0]}"
+                    first = False
+                lines.extend(gen)
+        _gen_op._pending_labels.append(end_lbl)
     return lines, label_ix + 1
 
 
 def _gen_op(op: Dict[str, Any], consts: Dict[int, str]) -> List[str]:
     t = op["type"]
     if t == "read":
-        return ["INP", f"STA {_mem_label(op['var'], consts)}"]
+        lines = ["INP", f"STA {_mem_label(op['var'], consts)}"]
+        return _attach_pending_label(lines)
     if t == "print":
-        return [f"LDA {_mem_label(op['var'], consts)}", "OUT"]
+        lines = [f"LDA {_mem_label(op['var'], consts)}", "OUT"]
+        return _attach_pending_label(lines)
     if t == "assign":
-        return _gen_assign(op, consts)
+        lines = _gen_assign(op, consts)
+        return _attach_pending_label(lines)
     if t == "if":
-        lines, _ = _gen_if(op, _gen_op._lbl_ix, consts)
-        _gen_op._lbl_ix = _ + 0  # keep updated
+        lines, new_ix = _gen_if(op, _gen_op._lbl_ix, consts)
+        _gen_op._lbl_ix = new_ix
         return lines
     return []
 
 _gen_op._lbl_ix = 1
+_gen_op._pending_labels = []
+
+def _attach_pending_label(lines: List[str]) -> List[str]:
+    if _gen_op._pending_labels and lines:
+        lbl = _gen_op._pending_labels.pop(0)
+        lines[0] = f"{lbl} {lines[0]}"
+    return lines
 
 
 def generate_lmc(ops: List[Dict[str, Any]]) -> str:
     vars_set, consts = _collect_symbols(ops)
     _gen_op._lbl_ix = 1
+    _gen_op._pending_labels = []
     code: List[str] = []
     for op in ops:
         code.extend(_gen_op(op, consts))

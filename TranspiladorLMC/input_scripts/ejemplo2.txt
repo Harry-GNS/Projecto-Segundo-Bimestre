@@ -1,0 +1,7 @@
+LEER N
+LEER M
+SI N < M ENTONCES
+    R = M - N
+SINO
+    R = N + 1
+IMPRIMIR R
