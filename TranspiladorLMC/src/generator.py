@@ -33,6 +33,13 @@ def _recolectar_simbolos(operaciones: List[Dict[str, Any]]) -> Tuple[set, Dict[i
                     constantes[0] = "CTE0"
                 if 1 not in constantes:
                     constantes[1] = "CTE1"
+            if op.get("op") == "/":
+                # Temporal para división y constantes 0 y 1
+                conjunto_vars.add("TMPDIV")
+                if 0 not in constantes:
+                    constantes[0] = "CTE0"
+                if 1 not in constantes:
+                    constantes[1] = "CTE1"
         elif t == "si":
             agregar_token(op["condicion"]["izquierda"])
             agregar_token(op["condicion"]["derecha"])
@@ -60,7 +67,7 @@ def _gen_asignacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]
         lineas.append(f"ADD {_etiqueta_mem(op['derecha'], constantes)}")
     elif op["op"] == "-":
         lineas.append(f"SUB {_etiqueta_mem(op['derecha'], constantes)}")
-    else:  # '*' manejado fuera
+    else:  # '*' y '/' manejados fuera
         return []
     lineas.append(f"STA {_etiqueta_mem(op['destino'], constantes)}")
     return lineas
@@ -102,6 +109,49 @@ def _gen_multiplicacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[
     lineas.append(f"STA {tmp}")
     lineas.append(f"BRA {etq_loop}")
     lineas.append(f"{etq_fin} LDA {destino}")  # etiqueta de fin (no cambia valor)
+    return lineas
+
+
+def _gen_division(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
+    destino = _etiqueta_mem(op['destino'], constantes)  # cociente
+    dividendo = _etiqueta_mem(op['izquierda'], constantes)
+    divisor = _etiqueta_mem(op['derecha'], constantes)
+
+    if 0 not in constantes:
+        constantes[0] = "CTE0"
+    if 1 not in constantes:
+        constantes[1] = "CTE1"
+
+    tmp = "TMPDIV"
+    idx = _gen_op._ix_etq
+    etq_loop = f"DIV{idx}"
+    etq_fin = f"FINDIV{idx}"
+    etq_ok = f"DIVOK{idx}"
+    _gen_op._ix_etq += 1
+
+    lineas: List[str] = []
+    # cociente = 0
+    lineas.append(f"LDA {constantes[0]}")
+    lineas.append(f"STA {destino}")
+    # tmp = dividendo
+    lineas.append(f"LDA {dividendo}")
+    lineas.append(f"STA {tmp}")
+    # Si divisor == 0 -> terminar (deja cociente=0)
+    lineas.append(f"LDA {divisor}")
+    lineas.append(f"BRZ {etq_fin}")
+    # loop: mientras tmp - divisor >= 0
+    lineas.append(f"{etq_loop} LDA {tmp}")
+    lineas.append(f"SUB {divisor}")
+    lineas.append(f"BRP {etq_ok}")
+    lineas.append(f"BRZ {etq_ok}")
+    lineas.append(f"BRA {etq_fin}")
+    # ok: tmp = tmp - divisor; cociente += 1
+    lineas.append(f"{etq_ok} STA {tmp}")
+    lineas.append(f"LDA {destino}")
+    lineas.append(f"ADD {constantes[1]}")
+    lineas.append(f"STA {destino}")
+    lineas.append(f"BRA {etq_loop}")
+    lineas.append(f"{etq_fin} LDA {destino}")
     return lineas
 
 
@@ -269,6 +319,10 @@ def _gen_op(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
             # Añadir tmp y constantes a símbolos para DAT
             _gen_op._vars_tmp.add("TMPMUL")
             lineas = _gen_multiplicacion(op, constantes)
+            return _adjuntar_etiqueta_pendiente(lineas)
+        elif op["op"] == "/":
+            _gen_op._vars_tmp.add("TMPDIV")
+            lineas = _gen_division(op, constantes)
             return _adjuntar_etiqueta_pendiente(lineas)
         else:
             lineas = _gen_asignacion(op, constantes)

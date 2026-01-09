@@ -37,11 +37,12 @@ python src/gui.py
 ## Qué soporta
 
 - Instrucciones: `LEER X`, `IMPRIMIR X`
-- Asignaciones: `Z = A + B`, `Z = A - 3`, `Z = A * B` (una operación por línea)
+- Asignaciones: `Z = A + B`, `Z = A - 3`, `Z = A * B`, `Z = A / B` (una operación por línea)
 - Condicionales: `SI A > B ENTONCES ... SINO ...`
 	- Comparadores: `>`, `<`, `=`, `>=`, `<=`, `!=`
 	- En `ENTONCES` y `SINO` se permiten `LEER`, `IMPRIMIR`, asignaciones y `SI` anidado simple
 
 Notas:
 - La multiplicación se implementa por sumas sucesivas (sin subrutinas externas).
+- La división se implementa por restas sucesivas; si `B = 0`, el cociente queda en `0`.
 - Aún no soporta paréntesis/múltiples operaciones por asignación, bucles (`MIENTRAS/PARA`) ni división.

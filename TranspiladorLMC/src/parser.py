@@ -5,11 +5,11 @@ Token = Dict[str, Any]
 
 
 def _es_asignacion(linea: str) -> bool:
-    return re.match(r"^\s*[A-Za-z][\w]*\s*=\s*(?:[A-Za-z][\w]*|\d+)\s*[+\-*]\s*(?:[A-Za-z][\w]*|\d+)\s*$", linea) is not None
+    return re.match(r"^\s*[A-Za-z][\w]*\s*=\s*(?:[A-Za-z][\w]*|\d+)\s*[+\-*/]\s*(?:[A-Za-z][\w]*|\d+)\s*$", linea) is not None
 
 
 def _parsear_asignacion(linea: str) -> Token:
-    m = re.match(r"^\s*([A-Za-z][\w]*)\s*=\s*([A-Za-z][\w]*|\d+)\s*([+\-*])\s*([A-Za-z][\w]*|\d+)\s*$", linea)
+    m = re.match(r"^\s*([A-Za-z][\w]*)\s*=\s*([A-Za-z][\w]*|\d+)\s*([+\-*/])\s*([A-Za-z][\w]*|\d+)\s*$", linea)
     assert m
     destino, izquierda, op, derecha = m.groups()
     return {"tipo": "asignacion", "destino": destino.upper(), "izquierda": izquierda.upper(), "op": op, "derecha": derecha.upper()}
