@@ -21,12 +21,12 @@ from PyQt5.QtWidgets import (
     QComboBox,
 )
 
-from parser import parse_pseudocode
-from generator import generate_lmc
-from utils import write_text, ensure_dir
+from parser import analizar_pseudocodigo
+from generator import generar_lmc
+from utils import escribir_texto, asegurar_directorio
 
 
-class MainWindow(QMainWindow):
+class VentanaPrincipal(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Transpilador LMC")
@@ -36,14 +36,14 @@ class MainWindow(QMainWindow):
 
         # Top controls
         self.load_btn = QPushButton("Cargar .txt")
-        self.load_btn.clicked.connect(self.load_file)
+        self.load_btn.clicked.connect(self.cargar_archivo)
 
         self.output_name_edit = QLineEdit()
         self.output_name_edit.setPlaceholderText("Nombre de salida (sin extensión)")
 
         self.generate_btn = QPushButton("Generar LMC")
         self.generate_btn.setDefault(True)
-        self.generate_btn.clicked.connect(self.generate)
+        self.generate_btn.clicked.connect(self.generar)
 
         # Destino de guardado
         self.dest_combo = QComboBox()
@@ -81,16 +81,16 @@ class MainWindow(QMainWindow):
         self.status = QStatusBar()
         self.setStatusBar(self.status)
 
-    def project_root(self) -> str:
+    def raiz_proyecto(self) -> str:
         return os.path.dirname(os.path.dirname(__file__))
 
-    def output_dir(self) -> str:
+    def carpeta_salida(self) -> str:
         # Carpeta seleccionada por el usuario (Harry/Juan/Anthony/Luis) dentro de output_lmc
         dest = self.dest_combo.currentText()
-        return os.path.join(self.project_root(), "output_lmc", dest)
+        return os.path.join(self.raiz_proyecto(), "output_lmc", dest)
 
-    def load_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Selecciona .txt", self.project_root(), "Text Files (*.txt);;All Files (*.*)")
+    def cargar_archivo(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Selecciona .txt", self.raiz_proyecto(), "Text Files (*.txt);;All Files (*.*)")
         if not path:
             return
         try:
@@ -104,18 +104,18 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo cargar el archivo:\n{e}")
 
-    def generate(self):
+    def generar(self):
         text = self.input_edit.toPlainText().strip()
         if not text:
             QMessageBox.warning(self, "Vacío", "Ingresa pseudo-código o carga un archivo.")
             return
         try:
             lines = text.splitlines()
-            ops = parse_pseudocode(lines)
-            lmc = generate_lmc(ops)
+            ops = analizar_pseudocodigo(lines)
+            lmc = generar_lmc(ops)
             self.output_edit.setPlainText(lmc)
 
-            ensure_dir(self.output_dir())
+            asegurar_directorio(self.carpeta_salida())
             # Determine output name
             base = self.output_name_edit.text().strip()
             if not base:
@@ -123,9 +123,9 @@ class MainWindow(QMainWindow):
                     base = os.path.splitext(os.path.basename(self.current_input_path))[0]
                 else:
                     base = f"manual_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            out_path = os.path.join(self.output_dir(), f"{base}.lmc")
+            out_path = os.path.join(self.carpeta_salida(), f"{base}.lmc")
 
-            write_text(out_path, lmc)
+            escribir_texto(out_path, lmc)
             self.status.showMessage(f"Generado y guardado en: {out_path}", 5000)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al generar LMC:\n{e}")
@@ -135,7 +135,7 @@ def run():
     app = QApplication(sys.argv)
     # Use Fusion style for a clean look
     app.setStyle("Fusion")
-    win = MainWindow()
+    win = VentanaPrincipal()
     win.show()
     sys.exit(app.exec_())
 

@@ -1,180 +1,180 @@
 from typing import List, Dict, Any, Tuple
 
 
-def _is_number(token: str) -> bool:
+def _es_numero(token: str) -> bool:
     return token.isdigit()
 
 
-def _collect_symbols(ops: List[Dict[str, Any]]) -> Tuple[set, Dict[int, str]]:
-    vars_set = set()
-    consts: Dict[int, str] = {}
-    def add_token(tok: str):
-        nonlocal vars_set, consts
-        if _is_number(tok):
-            val = int(tok)
-            if val not in consts:
-                consts[val] = f"CONST{val}"
+def _recolectar_simbolos(operaciones: List[Dict[str, Any]]) -> Tuple[set, Dict[int, str]]:
+    conjunto_vars = set()
+    constantes: Dict[int, str] = {}
+
+    def agregar_token(tok: str):
+        nonlocal conjunto_vars, constantes
+        if _es_numero(tok):
+            valor = int(tok)
+            if valor not in constantes:
+                constantes[valor] = f"CTE{valor}"
         else:
-            vars_set.add(tok.upper())
-    for op in ops:
-        t = op["type"]
-        if t == "read" or t == "print":
-            add_token(op["var"]) 
-        elif t == "assign":
-            add_token(op["dest"])
-            add_token(op["left"]) 
-            add_token(op["right"]) 
-        elif t == "if":
-            add_token(op["cond"]["left"]) 
-            add_token(op["cond"]["right"]) 
-            inner_vars, inner_consts = _collect_symbols(op["then"]) 
-            vars_set |= inner_vars
-            for k, v in inner_consts.items():
-                consts.setdefault(k, v)
-            inner_vars, inner_consts = _collect_symbols(op["else"]) 
-            vars_set |= inner_vars
-            for k, v in inner_consts.items():
-                consts.setdefault(k, v)
-    return vars_set, consts
+            conjunto_vars.add(tok.upper())
+
+    for op in operaciones:
+        t = op["tipo"]
+        if t == "leer" or t == "imprimir":
+            agregar_token(op["var"])
+        elif t == "asignacion":
+            agregar_token(op["destino"])
+            agregar_token(op["izquierda"])
+            agregar_token(op["derecha"])
+        elif t == "si":
+            agregar_token(op["condicion"]["izquierda"])
+            agregar_token(op["condicion"]["derecha"])
+            vars_int, consts_int = _recolectar_simbolos(op["entonces"])
+            conjunto_vars |= vars_int
+            for k, v in consts_int.items():
+                constantes.setdefault(k, v)
+            vars_int, consts_int = _recolectar_simbolos(op["sino"])
+            conjunto_vars |= vars_int
+            for k, v in consts_int.items():
+                constantes.setdefault(k, v)
+    return conjunto_vars, constantes
 
 
-def _mem_label(token: str, consts: Dict[int, str]) -> str:
-    if _is_number(token):
-        return consts[int(token)]
+def _etiqueta_mem(token: str, constantes: Dict[int, str]) -> str:
+    if _es_numero(token):
+        return constantes[int(token)]
     return token.upper()
 
 
-def _gen_assign(op: Dict[str, Any], consts: Dict[int, str]) -> List[str]:
-    lines: List[str] = []
-    lines.append(f"LDA {_mem_label(op['left'], consts)}")
+def _gen_asignacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
+    lineas: List[str] = []
+    lineas.append(f"LDA {_etiqueta_mem(op['izquierda'], constantes)}")
     if op["op"] == "+":
-        lines.append(f"ADD {_mem_label(op['right'], consts)}")
+        lineas.append(f"ADD {_etiqueta_mem(op['derecha'], constantes)}")
     else:
-        lines.append(f"SUB {_mem_label(op['right'], consts)}")
-    lines.append(f"STA {_mem_label(op['dest'], consts)}")
-    return lines
+        lineas.append(f"SUB {_etiqueta_mem(op['derecha'], constantes)}")
+    lineas.append(f"STA {_etiqueta_mem(op['destino'], constantes)}")
+    return lineas
 
 
-def _gen_if(op: Dict[str, Any], label_ix: int, consts: Dict[int, str]) -> Tuple[List[str], int]:
-    lines: List[str] = []
-    left = _mem_label(op["cond"]["left"], consts)
-    right = _mem_label(op["cond"]["right"], consts)
-    then_lbl = f"THEN{label_ix}"
-    else_lbl = f"ELSE{label_ix}"
-    end_lbl = f"ENDIF{label_ix}"
-    cmp = op["cond"]["op"]
+def _gen_si(op: Dict[str, Any], indice_etq: int, constantes: Dict[int, str]) -> Tuple[List[str], int]:
+    lineas: List[str] = []
+    izquierda = _etiqueta_mem(op["condicion"]["izquierda"], constantes)
+    derecha = _etiqueta_mem(op["condicion"]["derecha"], constantes)
+    etq_entonces = f"ENTONCES{indice_etq}"
+    etq_sino = f"SINO{indice_etq}"
+    etq_finsi = f"FINSI{indice_etq}"
+    cmp = op["condicion"]["op"]
     if cmp == ">":
-        lines.append(f"LDA {left}")
-        lines.append(f"SUB {right}")
-        lines.append(f"BRZ {else_lbl}")
-        lines.append(f"BRP {then_lbl}")
-        # ELSE block with inline label on first instruction
-        first = True
-        for inner in op["else"]:
-            gen = _gen_op(inner, consts)
+        lineas.append(f"LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_sino}")
+        lineas.append(f"BRP {etq_entonces}")
+        primero = True
+        for interior in op["sino"]:
+            gen = _gen_op(interior, constantes)
             if gen:
-                if first:
-                    gen[0] = f"{else_lbl} {gen[0]}"
-                    first = False
-                lines.extend(gen)
-        lines.append(f"BRA {end_lbl}")
-        # THEN block with inline label on first instruction
-        first = True
-        for inner in op["then"]:
-            gen = _gen_op(inner, consts)
+                if primero:
+                    gen[0] = f"{etq_sino} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        lineas.append(f"BRA {etq_finsi}")
+        primero = True
+        for interior in op["entonces"]:
+            gen = _gen_op(interior, constantes)
             if gen:
-                if first:
-                    gen[0] = f"{then_lbl} {gen[0]}"
-                    first = False
-                lines.extend(gen)
-        # Mark end label to be attached to the next instruction emitted after the if
-        _gen_op._pending_labels.append(end_lbl)
+                if primero:
+                    gen[0] = f"{etq_entonces} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        _gen_op._etiquetas_pendientes.append(etq_finsi)
     elif cmp == "<":
-        lines.append(f"LDA {right}")
-        lines.append(f"SUB {left}")
-        lines.append(f"BRZ {else_lbl}")
-        lines.append(f"BRP {then_lbl}")
-        first = True
-        for inner in op["else"]:
-            gen = _gen_op(inner, consts)
+        lineas.append(f"LDA {derecha}")
+        lineas.append(f"SUB {izquierda}")
+        lineas.append(f"BRZ {etq_sino}")
+        lineas.append(f"BRP {etq_entonces}")
+        primero = True
+        for interior in op["sino"]:
+            gen = _gen_op(interior, constantes)
             if gen:
-                if first:
-                    gen[0] = f"{else_lbl} {gen[0]}"
-                    first = False
-                lines.extend(gen)
-        lines.append(f"BRA {end_lbl}")
-        first = True
-        for inner in op["then"]:
-            gen = _gen_op(inner, consts)
+                if primero:
+                    gen[0] = f"{etq_sino} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        lineas.append(f"BRA {etq_finsi}")
+        primero = True
+        for interior in op["entonces"]:
+            gen = _gen_op(interior, constantes)
             if gen:
-                if first:
-                    gen[0] = f"{then_lbl} {gen[0]}"
-                    first = False
-                lines.extend(gen)
-        _gen_op._pending_labels.append(end_lbl)
+                if primero:
+                    gen[0] = f"{etq_entonces} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        _gen_op._etiquetas_pendientes.append(etq_finsi)
     else:  # '='
-        lines.append(f"LDA {left}")
-        lines.append(f"SUB {right}")
-        lines.append(f"BRZ {then_lbl}")
-        lines.append(f"BRA {else_lbl}")
-        first = True
-        for inner in op["then"]:
-            gen = _gen_op(inner, consts)
+        lineas.append(f"LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_entonces}")
+        lineas.append(f"BRA {etq_sino}")
+        primero = True
+        for interior in op["entonces"]:
+            gen = _gen_op(interior, constantes)
             if gen:
-                if first:
-                    gen[0] = f"{then_lbl} {gen[0]}"
-                    first = False
-                lines.extend(gen)
-        lines.append(f"BRA {end_lbl}")
-        first = True
-        for inner in op["else"]:
-            gen = _gen_op(inner, consts)
+                if primero:
+                    gen[0] = f"{etq_entonces} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        lineas.append(f"BRA {etq_finsi}")
+        primero = True
+        for interior in op["sino"]:
+            gen = _gen_op(interior, constantes)
             if gen:
-                if first:
-                    gen[0] = f"{else_lbl} {gen[0]}"
-                    first = False
-                lines.extend(gen)
-        _gen_op._pending_labels.append(end_lbl)
-    return lines, label_ix + 1
+                if primero:
+                    gen[0] = f"{etq_sino} {gen[0]}"
+                    primero = False
+                lineas.extend(gen)
+        _gen_op._etiquetas_pendientes.append(etq_finsi)
+    return lineas, indice_etq + 1
 
 
-def _gen_op(op: Dict[str, Any], consts: Dict[int, str]) -> List[str]:
-    t = op["type"]
-    if t == "read":
-        lines = ["INP", f"STA {_mem_label(op['var'], consts)}"]
-        return _attach_pending_label(lines)
-    if t == "print":
-        lines = [f"LDA {_mem_label(op['var'], consts)}", "OUT"]
-        return _attach_pending_label(lines)
-    if t == "assign":
-        lines = _gen_assign(op, consts)
-        return _attach_pending_label(lines)
-    if t == "if":
-        lines, new_ix = _gen_if(op, _gen_op._lbl_ix, consts)
-        _gen_op._lbl_ix = new_ix
-        return lines
+def _gen_op(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
+    t = op["tipo"]
+    if t == "leer":
+        lineas = ["INP", f"STA {_etiqueta_mem(op['var'], constantes)}"]
+        return _adjuntar_etiqueta_pendiente(lineas)
+    if t == "imprimir":
+        lineas = [f"LDA {_etiqueta_mem(op['var'], constantes)}", "OUT"]
+        return _adjuntar_etiqueta_pendiente(lineas)
+    if t == "asignacion":
+        lineas = _gen_asignacion(op, constantes)
+        return _adjuntar_etiqueta_pendiente(lineas)
+    if t == "si":
+        lineas, nuevo_ix = _gen_si(op, _gen_op._ix_etq, constantes)
+        _gen_op._ix_etq = nuevo_ix
+        return lineas
     return []
 
-_gen_op._lbl_ix = 1
-_gen_op._pending_labels = []
-
-def _attach_pending_label(lines: List[str]) -> List[str]:
-    if _gen_op._pending_labels and lines:
-        lbl = _gen_op._pending_labels.pop(0)
-        lines[0] = f"{lbl} {lines[0]}"
-    return lines
+_gen_op._ix_etq = 1
+_gen_op._etiquetas_pendientes = []
 
 
-def generate_lmc(ops: List[Dict[str, Any]]) -> str:
-    vars_set, consts = _collect_symbols(ops)
-    _gen_op._lbl_ix = 1
-    _gen_op._pending_labels = []
-    code: List[str] = []
-    for op in ops:
-        code.extend(_gen_op(op, consts))
-    code.append("HLT")
-    for v in sorted(vars_set):
-        code.append(f"{v} DAT")
-    for val, lbl in sorted(consts.items()):
-        code.append(f"{lbl} DAT {val}")
-    return "\n".join(code)
+def _adjuntar_etiqueta_pendiente(lineas: List[str]) -> List[str]:
+    if _gen_op._etiquetas_pendientes and lineas:
+        etq = _gen_op._etiquetas_pendientes.pop(0)
+        lineas[0] = f"{etq} {lineas[0]}"
+    return lineas
+
+
+def generar_lmc(operaciones: List[Dict[str, Any]]) -> str:
+    conjunto_vars, constantes = _recolectar_simbolos(operaciones)
+    _gen_op._ix_etq = 1
+    _gen_op._etiquetas_pendientes = []
+    codigo: List[str] = []
+    for op in operaciones:
+        codigo.extend(_gen_op(op, constantes))
+    codigo.append("HLT")
+    for v in sorted(conjunto_vars):
+        codigo.append(f"{v} DAT")
+    for valor, etq in sorted(constantes.items()):
+        codigo.append(f"{etq} DAT {valor}")
+    return "\n".join(codigo)

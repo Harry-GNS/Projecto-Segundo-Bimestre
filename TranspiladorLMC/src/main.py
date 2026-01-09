@@ -1,27 +1,27 @@
 import argparse
 import os
-from parser import parse_pseudocode
-from generator import generate_lmc
-from utils import read_lines, write_text, ensure_dir
+from parser import analizar_pseudocodigo
+from generator import generar_lmc
+from utils import leer_lineas, escribir_texto, asegurar_directorio
 
 
-DEST_CHOICES = ["Harry", "Juan", "Anthony", "Luis"]
+OPCIONES_DESTINO = ["Harry", "Juan", "Anthony", "Luis"]
 
 
 def main():
     ap = argparse.ArgumentParser(description="Transpilador de pseudo-código a LMC")
     ap.add_argument("--input", required=True, help="Ruta del archivo de pseudo-código de entrada")
     ap.add_argument("--output", required=False, help="Ruta del archivo LMC de salida")
-    ap.add_argument("--dest", choices=DEST_CHOICES, help="Carpeta destino dentro del proyecto")
+    ap.add_argument("--dest", choices=OPCIONES_DESTINO, help="Carpeta destino dentro del proyecto")
     args = ap.parse_args()
 
     in_path = args.input
     if not os.path.isfile(in_path):
         raise FileNotFoundError(f"No existe el archivo de entrada: {in_path}")
 
-    lines = read_lines(in_path)
-    ops = parse_pseudocode(lines)
-    lmc = generate_lmc(ops)
+    lineas = leer_lineas(in_path)
+    operaciones = analizar_pseudocodigo(lineas)
+    lmc = generar_lmc(operaciones)
 
     if args.output:
         out_path = args.output
@@ -33,24 +33,24 @@ def main():
             dest_folder = args.dest
         else:
             print("Seleccione carpeta destino:")
-            for i, name in enumerate(DEST_CHOICES, start=1):
+            for i, name in enumerate(OPCIONES_DESTINO, start=1):
                 print(f"  {i}. {name}")
             choice = input("Ingrese número (1-4): ").strip()
             try:
                 idx = int(choice)
-                if idx < 1 or idx > len(DEST_CHOICES):
+                if idx < 1 or idx > len(OPCIONES_DESTINO):
                     raise ValueError()
-                dest_folder = DEST_CHOICES[idx - 1]
+                dest_folder = OPCIONES_DESTINO[idx - 1]
             except Exception:
                 # Valor por defecto
-                dest_folder = DEST_CHOICES[0]
+                dest_folder = OPCIONES_DESTINO[0]
                 print(f"Selección inválida. Usando '{dest_folder}'.")
 
         out_dir = os.path.join(project_root, "output_lmc", dest_folder)
-        ensure_dir(out_dir)
+        asegurar_directorio(out_dir)
         out_path = os.path.join(out_dir, f"{base}.lmc")
 
-    write_text(out_path, lmc)
+    escribir_texto(out_path, lmc)
     print(f"Archivo LMC generado en: {out_path}")
 
 
