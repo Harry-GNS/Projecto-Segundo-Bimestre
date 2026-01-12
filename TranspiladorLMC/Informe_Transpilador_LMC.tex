@@ -230,6 +230,24 @@ Medir ciclos del ciclo \emph{Fetch-Decode-Execute} y el número de instrucciones
   \item Sucesión de Fibonacci (versión iterativa básica).
 \end{itemize}
 
+\subsection{Escenario 1: Multiplicación por sumas sucesivas (programa)}
+En este escenario se utiliza el programa para transcompilar el algoritmo de multiplicación por sumas sucesivas. La figura muestra el pseudo-código con la estructura \texttt{MIENTRAS} y el código LMC resultante generado por la herramienta. No se repite el contenido en texto para evitar duplicidad.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{arquifinal4.png}
+  \caption{Escenario 1 (programa): pseudo-código con bucle \texttt{MIENTRAS} y salida LMC generada automáticamente.}
+\end{figure}
+
+\subsection{Escenario 2: Multiplicación por sumas sucesivas (manual optimizado)}
+La siguiente figura muestra una versión manual optimizada del mismo algoritmo. Es más eficiente porque simplifica la condición del bucle: en lugar de evaluar con instrucciones adicionales (\texttt{SUB CTE0} y un salto extra), asume que \texttt{Y} nunca será negativa y usa directamente \texttt{LDA Y} seguido de \texttt{BRZ FIN}. Esto elimina trabajo innecesario en cada iteración y reduce ciclos.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{arquifinal5.png}
+  \caption{Escenario 2 (manual optimizado): condición del bucle simplificada, menos saltos por iteración.}
+\end{figure}
+
 \subsection{Tabla de eficiencia}
 \begin{table}[H]
 \centering
