@@ -51,6 +51,13 @@ def _recolectar_simbolos(operaciones: List[Dict[str, Any]]) -> Tuple[set, Dict[i
             conjunto_vars |= vars_int
             for k, v in consts_int.items():
                 constantes.setdefault(k, v)
+        elif t == "mientras":
+            agregar_token(op["condicion"]["izquierda"])
+            agregar_token(op["condicion"]["derecha"])
+            vars_int, consts_int = _recolectar_simbolos(op["cuerpo"])
+            conjunto_vars |= vars_int
+            for k, v in consts_int.items():
+                constantes.setdefault(k, v)
     return conjunto_vars, constantes
 
 
@@ -306,6 +313,69 @@ def _gen_si(op: Dict[str, Any], indice_etq: int, constantes: Dict[int, str]) -> 
     return lineas, indice_etq + 1
 
 
+def _gen_mientras(op: Dict[str, Any], indice_etq: int, constantes: Dict[int, str]) -> Tuple[List[str], int]:
+    lineas: List[str] = []
+    izquierda = _etiqueta_mem(op["condicion"]["izquierda"], constantes)
+    derecha = _etiqueta_mem(op["condicion"]["derecha"], constantes)
+    cmp = op["condicion"]["op"]
+
+    etq_loop = f"MIENTRAS{indice_etq}"
+    etq_body = f"DO{indice_etq}"
+    etq_fin = f"FINMIENTRAS{indice_etq}"
+
+    # Punto de comprobación
+    if cmp == ">":
+        lineas.append(f"{etq_loop} LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        # BRP incluye cero; primero filtrar cero con BRZ
+        lineas.append(f"BRZ {etq_fin}")
+        lineas.append(f"BRP {etq_body}")
+        lineas.append(f"BRA {etq_fin}")
+    elif cmp == "<":
+        lineas.append(f"{etq_loop} LDA {derecha}")
+        lineas.append(f"SUB {izquierda}")
+        # BRP incluye cero; primero filtrar cero con BRZ
+        lineas.append(f"BRZ {etq_fin}")
+        lineas.append(f"BRP {etq_body}")
+        lineas.append(f"BRA {etq_fin}")
+    elif cmp == "=":
+        lineas.append(f"{etq_loop} LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_body}")
+        lineas.append(f"BRA {etq_fin}")
+    elif cmp == ">=":
+        lineas.append(f"{etq_loop} LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_body}")
+        lineas.append(f"BRP {etq_body}")
+        lineas.append(f"BRA {etq_fin}")
+    elif cmp == "<=":
+        lineas.append(f"{etq_loop} LDA {derecha}")
+        lineas.append(f"SUB {izquierda}")
+        lineas.append(f"BRZ {etq_body}")
+        lineas.append(f"BRP {etq_body}")
+        lineas.append(f"BRA {etq_fin}")
+    elif cmp == "!=":
+        lineas.append(f"{etq_loop} LDA {izquierda}")
+        lineas.append(f"SUB {derecha}")
+        lineas.append(f"BRZ {etq_fin}")
+        lineas.append(f"BRA {etq_body}")
+
+    # Cuerpo del bucle
+    primero = True
+    for interior in op["cuerpo"]:
+        gen = _gen_op(interior, constantes)
+        if gen:
+            if primero:
+                gen[0] = f"{etq_body} {gen[0]}"
+                primero = False
+            lineas.extend(gen)
+    # Volver a comprobar
+    lineas.append(f"BRA {etq_loop}")
+    _gen_op._etiquetas_pendientes.append(etq_fin)
+    return lineas, indice_etq + 1
+
+
 def _gen_op(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
     t = op["tipo"]
     if t == "leer":
@@ -329,6 +399,10 @@ def _gen_op(op: Dict[str, Any], constantes: Dict[int, str]) -> List[str]:
             return _adjuntar_etiqueta_pendiente(lineas)
     if t == "si":
         lineas, nuevo_ix = _gen_si(op, _gen_op._ix_etq, constantes)
+        _gen_op._ix_etq = nuevo_ix
+        return lineas
+    if t == "mientras":
+        lineas, nuevo_ix = _gen_mientras(op, _gen_op._ix_etq, constantes)
         _gen_op._ix_etq = nuevo_ix
         return lineas
     return []
