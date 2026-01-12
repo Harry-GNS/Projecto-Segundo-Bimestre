@@ -1,4 +1,0 @@
-LEER A
-LEER B
-C = A / B
-IMPRIMIR C

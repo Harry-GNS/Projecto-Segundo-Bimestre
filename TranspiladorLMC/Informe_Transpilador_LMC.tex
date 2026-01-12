@@ -188,13 +188,7 @@ B DAT
 C DAT
 \end{lstlisting}
 
-\subsection{Multiplicación por sumas sucesivas (idea)}
-\begin{lstlisting}[language=Pseudo,style=codeStyle]
-LEER X
-LEER Y
-P = X * Y
-IMPRIMIR P
-\end{lstlisting}
+
 
 \noindent Estrategia: inicializar acumulador en 0, sumar \texttt{X} repetidamente \texttt{Y} veces, decrementando un contador temporal. El generador usa etiquetas para el bucle y \texttt{CTE0}/\texttt{CTE1}.
 
@@ -220,15 +214,7 @@ Esta sección corresponde al uso del programa con interfaz gráfica (\texttt{gui
   \caption{Al generar LMC, el código se visualiza en el programa y además se crea un archivo de texto (\texttt{.lmc}) en la carpeta elegida.}
 \end{figure}
 
-\subsection{CLI del proyecto}
-Desde la raíz del proyecto, instalar dependencias y ejecutar:
 
-\begin{verbatim}
-python -m pip install -r requirements.txt
-python src\main.py --input input_scripts\ejemplo1.txt --dest Harry
-# o especificar salida directamente
-python src\main.py --input input_scripts\ejemplo1.txt --output output_lmc\Harry\ejemplo1.lmc
-\end{verbatim}
 
 \subsection{Validación en simulador}
 Copiar el ensamblador generado y validarlo en:
