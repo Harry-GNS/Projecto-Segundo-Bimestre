@@ -1,0 +1,288 @@
+% Informe: Transpilador de Pseudo-código a Ensamblador LMC
+% Archivo listo para Overleaf
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{courier}
+\usepackage{fancyhdr}
+\usepackage{url}
+\geometry{margin=2.5cm}
+
+% Encabezado y pie de página
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Escuela Politécnica Nacional}
+\cfoot{\thepage}
+
+% Configuración de listings
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+
+\lstdefinestyle{codeStyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegray},
+  keywordstyle=\color{blue},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\linespread{0.95}\ttfamily\footnotesize,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=6pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2
+}
+
+\lstdefinelanguage{Pseudo}{
+  morekeywords={LEER,IMPRIMIR,SI,ENTONCES,SINO},
+  sensitive=false,
+}
+
+\lstdefinelanguage{LMC}{
+  morekeywords={INP,OUT,LDA,STA,ADD,SUB,BRA,BRP,BRZ,HLT,DAT},
+  sensitive=true,
+}
+
+\begin{document}
+
+% ---------------- PORTADA ----------------
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\scshape\LARGE Escuela Politécnica Nacional \par}
+  \vspace{1.5cm}
+  {\huge\bfseries Transpilador de Pseudo-código a Ensamblador LMC (Little Man Computer)\par}
+  \vspace{1.0cm}
+  {\Large Arquitectura de Computadores GR1CC \par}
+  \vspace{2.0cm}
+
+  {\large\bf Integrantes: \par}
+  \vspace{0.4cm}
+  {\large Castañeda Morales Juan David \par}
+  \vspace{0.2cm}
+  {\large Guaján Simbana Harry Nicolás \par}
+  \vspace{0.2cm}
+  {\large Holguin Sánchez Anthony David \par}
+  \vspace{0.2cm}
+  {\large Moreta Chango Luis Esteban \par}
+
+  \vspace{2.0cm}
+  {\large Fecha de entrega: 12 de Enero de 2026\par}
+
+  \vfill
+  {\small Profesor: MARTÍNEZ GORDON RONIE STALIN}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ---------------- RESUMEN ----------------
+\section*{Resumen}
+Este informe presenta el desarrollo de un transpilador (mini-compilador) que traduce pseudo-código simple a ensamblador estándar del modelo \emph{Little Man Computer} (LMC). El sistema lee un archivo de texto con instrucciones de alto nivel (lectura, escritura, asignaciones y condicionales) y emite un archivo con mnemónicos LMC listos para ejecutarse en simuladores web reconocidos. Se incluyen el diseño, la implementación, ejemplos, y un análisis comparativo de eficiencia entre el código generado automáticamente y una versión escrita y optimizada manualmente.
+
+\section{Introducción}
+El \textbf{Little Man Computer (LMC)} es un modelo educativo que ilustra la arquitectura de Von Neumann y el ciclo \emph{Fetch-Decode-Execute}. En este proyecto se implementa un transpilador que recibe pseudo-código con operaciones aritméticas básicas y estructuras de control simples, y produce código LMC equivalente. El trabajo busca: (i) reforzar conceptos de arquitectura (buses, memoria unificada, set de instrucciones), (ii) ejercitar el diseño de analizadores y generadores de código, y (iii) medir eficiencia en términos de instrucciones y ciclos de reloj.
+
+\section{Objetivo}
+Desarrollar un transpilador en Python que traduzca operaciones matemáticas y lógicas escritas en pseudo-código simple a ensamblador LMC estándar, generando un archivo de salida listo para validarse en el simulador web 101computing LMC (\url{https://101computing.net/LMC/}).
+
+\section{Requerimientos}
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Entrada:} Archivo de texto con pseudo-código. Ejemplo:
+
+\begin{lstlisting}[language=Pseudo,style=codeStyle,caption={Ejemplo de entrada en pseudo-código}]
+LEER A
+LEER B
+SI A > B ENTONCES
+  C = A - B
+SINO
+  C = B - A
+IMPRIMIR C
+\end{lstlisting}
+
+  \item \textbf{Proceso:} Parseo del pseudo-código y traducción a mnemónicos LMC: \texttt{INP}, \texttt{STA}, \texttt{LDA}, \texttt{ADD}, \texttt{SUB}, \texttt{BRA}, \texttt{BRP}, \texttt{BRZ}, \texttt{OUT}, \texttt{HLT}, \texttt{DAT}.
+  \item \textbf{Salida:} Archivo de texto con el código ensamblador LMC listo para ejecutar en el simulador web 101computing LMC.
+  \item \textbf{Análisis comparativo:} Para un algoritmo estándar (p.ej., \emph{Multiplicación por sumas sucesivas} o \emph{Sucesión de Fibonacci}), comparar:
+  \begin{itemize}
+    \item Escenario 1: Código generado por el transpilador.
+    \item Escenario 2: Código escrito a mano con optimizaciones.
+    \item Entregable: Tabla comparativa de eficiencia (instrucciones vs ciclos F-D-E).
+  \end{itemize}
+\end{enumerate}
+
+\section{Marco Teórico}
+\subsection{Modelo de Von Neumann}
+Memoria unificada para datos e instrucciones; CPU con unidad de control y ALU; buses de datos, direcciones y control. El ciclo de instrucción se resume en: búsqueda de instrucción (fetch), decodificación (decode) y ejecución (execute).
+
+\subsection{Conjunto de Instrucciones LMC}
+LMC expone mnemónicos como: \texttt{INP}/\texttt{OUT}, \texttt{LDA}/\texttt{STA}, \texttt{ADD}/\texttt{SUB}, saltos \texttt{BRA}/\texttt{BRP}/\texttt{BRZ}, \texttt{HLT} para detener y \texttt{DAT} para reservar memoria/constantes.
+
+\section{Metodología y Diseño}
+\subsection{Lenguaje de entrada}
+El pseudo-código soportado incluye: \texttt{LEER X}, \texttt{IMPRIMIR X}, asignaciones \texttt{X = Y op Z} con \texttt{op} en \{\texttt{+},\texttt{-},\texttt{*},\texttt{/}\}, y condicionales de la forma \texttt{SI A op B ENTONCES} con \texttt{op} en \{\texttt{>},\texttt{<},\texttt{=},\texttt{>=},\texttt{<=},\texttt{!=}\}, seguidos opcionalmente por bloque \texttt{SINO}.
+
+\subsection{Arquitectura del transpilador}
+El proyecto se organiza en módulos Python:
+\begin{itemize}
+  \item \textbf{parser.py:} Tokeniza y construye operaciones intermedias (leer, imprimir, asignación, condicional).
+  \item \textbf{generator.py:} Emite mnemónicos LMC. Implementa suma/resta directa y estrategias por \emph{sumas sucesivas} y \emph{restas sucesivas} para multiplicación y división, respectivamente.
+  \item \textbf{main.py:} CLI para leer archivo de entrada y guardar la salida LMC en la carpeta indicada.
+  \item \textbf{utils.py:} Utilitarios de E/S y manejo de rutas.
+  \item \textbf{gui.py:} Interfaz gráfica (PyQt5) para cargar pseudo-código, ejecutar la traducción y visualizar/guardar el LMC en \texttt{output\_lmc/} por usuario.
+\end{itemize}
+
+\subsection{Estrategias de generación}
+\begin{itemize}
+  \item \textbf{Aritmética (+, -):} Traducción directa usando \texttt{LDA}, \texttt{ADD}/\texttt{SUB}, \texttt{STA}.
+  \item \textbf{Multiplicación (*):} Sumas sucesivas con acumulador y contador decreciente (usa temporales y constantes \texttt{CTE0}, \texttt{CTE1}).
+  \item \textbf{División (/):} Restas sucesivas hasta que el dividendo parcial sea negativo o cero, incrementando el cociente.
+  \item \textbf{Condicionales:} Comparaciones mediante \texttt{LDA}/\texttt{SUB} y saltos con \texttt{BRP}/\texttt{BRZ}/\texttt{BRA} para construir \texttt{ENTONCES}/\texttt{SINO}.
+\end{itemize}
+
+\section{Implementación}
+\subsection{Ejemplo de entrada}
+\begin{lstlisting}[language=Pseudo,style=codeStyle]
+LEER A
+LEER B
+SI A > B ENTONCES
+  C = A - B
+SINO
+  C = B - A
+IMPRIMIR C
+\end{lstlisting}
+
+\subsection{Salida LMC generada}
+\begin{lstlisting}[language=LMC,style=codeStyle]
+INP
+STA A
+INP
+STA B
+LDA A
+SUB B
+BRZ SINO1
+BRP ENTONCES1
+SINO1 LDA B
+SUB A
+STA C
+BRA FINSI1
+ENTONCES1 LDA A
+SUB B
+STA C
+FINSI1 LDA C
+OUT
+HLT
+A DAT
+B DAT
+C DAT
+\end{lstlisting}
+
+\subsection{Multiplicación por sumas sucesivas (idea)}
+\begin{lstlisting}[language=Pseudo,style=codeStyle]
+LEER X
+LEER Y
+P = X * Y
+IMPRIMIR P
+\end{lstlisting}
+
+\noindent Estrategia: inicializar acumulador en 0, sumar \texttt{X} repetidamente \texttt{Y} veces, decrementando un contador temporal. El generador usa etiquetas para el bucle y \texttt{CTE0}/\texttt{CTE1}.
+
+\section{Uso y Ejecución}
+\subsection{Programa (GUI)}
+Esta sección corresponde al uso del programa con interfaz gráfica (\texttt{gui.py}). Desde la ventana principal se puede escribir el pseudo-código o cargar un archivo \texttt{.txt}, seleccionar el nombre de salida y la carpeta del integrante donde guardar, y generar el código LMC visualizándolo en el panel derecho.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{arquifinal1.png}
+  \caption{Pantalla inicial: escribir pseudo-código o cargar un archivo \texttt{.txt} para convertir.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{arquifinal2.png}
+  \caption{Selección de nombre de archivo y carpeta del integrante donde se desea guardar.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{arquifinal3.png}
+  \caption{Al generar LMC, el código se visualiza en el programa y además se crea un archivo de texto (\texttt{.lmc}) en la carpeta elegida.}
+\end{figure}
+
+\subsection{CLI del proyecto}
+Desde la raíz del proyecto, instalar dependencias y ejecutar:
+
+\begin{verbatim}
+python -m pip install -r requirements.txt
+python src\main.py --input input_scripts\ejemplo1.txt --dest Harry
+# o especificar salida directamente
+python src\main.py --input input_scripts\ejemplo1.txt --output output_lmc\Harry\ejemplo1.lmc
+\end{verbatim}
+
+\subsection{Validación en simulador}
+Copiar el ensamblador generado y validarlo en:
+\begin{itemize}
+  \item 101computing LMC: \url{https://101computing.net/LMC/}
+\end{itemize}
+Medir ciclos del ciclo \emph{Fetch-Decode-Execute} y el número de instrucciones ejecutadas.
+
+\section{Análisis Comparativo}
+\subsection{Algoritmos evaluados}
+\begin{itemize}
+  \item Multiplicación por sumas sucesivas.
+  \item Sucesión de Fibonacci (versión iterativa básica).
+\end{itemize}
+
+\subsection{Tabla de eficiencia}
+\begin{table}[H]
+\centering
+\caption{Comparación de eficiencia: transpilador vs. manual optimizado}
+\begin{tabular}{|l|l|c|c|l|}
+\hline
+\textbf{Algoritmo} & \textbf{Escenario} & \textbf{Instrucciones} & \textbf{Ciclos F-D-E} & \textbf{Observaciones} \\
+\hline
+Multiplicación & Transpilador & \\ & \\ & Usa sumas sucesivas \\
+\hline
+Multiplicación & Manual Opt. & \\ & \\ & Reutiliza acumulador, menos saltos \\
+\hline
+Fibonacci & Transpilador & \\ & \\ & Implementación directa \\
+\hline
+Fibonacci & Manual Opt. & \\ & \\ & Menos \texttt{DAT}/saltos \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent Llenar la tabla con métricas recogidas del simulador (contadores de pasos e inspección de ejecución).
+
+\section{Discusión}
+El código generado por el transpilador prioriza claridad y generalidad, lo que puede introducir saltos adicionales y temporales. La versión manual optimizada suele reducir instrucciones y ciclos al explotar invariantes, reordenar operaciones y minimizar accesos a memoria (\texttt{STA}/\texttt{LDA}). Estos resultados evidencian la relación entre el modelo de ejecución LMC y la eficiencia observada.
+
+\section{Conclusiones}
+\begin{itemize}
+  \item Se implementó un transpilador funcional de pseudo-código a LMC, validado en simuladores web.
+  \item La comparación transpilador vs. optimizado muestra diferencias medibles en instrucciones y ciclos.
+  \item El ejercicio refuerza conceptos de Von Neumann y del ciclo F-D-E, así como el impacto de decisiones de diseño a bajo nivel.
+\end{itemize}
+
+\section*{Trabajo Futuro}
+Extender el lenguaje fuente (bucles \texttt{MIENTRAS}, variables múltiples en una línea), optimizaciones simples (propagación de constantes, eliminación de saltos redundantes) y soporte de comentarios/errores detallados en el parser.
+
+\section*{Referencias}
+\begin{itemize}
+  \item P. J. Higginson, ``Little Man Computer Simulator'', 101computing.net.
+  \item D. Page, ``The Little Man Computer'', University of York.
+  \item J. von Neumann, ``First Draft of a Report on the EDVAC'', 1945.
+\end{itemize}
+
+\end{document}

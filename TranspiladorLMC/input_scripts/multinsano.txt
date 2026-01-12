@@ -1,0 +1,4 @@
+LEER X
+LEER Y
+P = X * Y
+IMPRIMIR P
