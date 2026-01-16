@@ -166,26 +166,32 @@ IMPRIMIR C
 \subsection{Salida LMC generada}
 \begin{lstlisting}[language=LMC,style=codeStyle]
 INP
-STA A
+STA X
 INP
-STA B
-LDA A
-SUB B
-BRZ SINO1
-BRP ENTONCES1
-SINO1 LDA B
-SUB A
-STA C
-BRA FINSI1
-ENTONCES1 LDA A
-SUB B
-STA C
-FINSI1 LDA C
-OUT
-HLT
-A DAT
-B DAT
-C DAT
+STA Y
+LDA CTE0
+STA P
+
+LOOP    LDA Y
+        BRZ FIN
+        LDA P
+        ADD X
+        STA P
+        LDA Y
+        SUB CTE1
+        STA Y
+        BRA LOOP
+
+FIN     LDA P
+        OUT
+        HLT
+
+P   DAT 0
+X   DAT
+Y   DAT
+CTE1 DAT 1
+CTE0 DAT 0
+
 \end{lstlisting}
 
 
@@ -228,9 +234,12 @@ Medir ciclos del ciclo \emph{Fetch-Decode-Execute} y el número de instrucciones
 \begin{itemize}
   \item Multiplicación por sumas sucesivas.
   \item Sucesión de Fibonacci (versión iterativa básica).
+  \item Otros de otros integrantes etc
 \end{itemize}
 
-\subsection{Escenario 1: Multiplicación por sumas sucesivas (programa)}
+\subsection{ Multiplicación por sumas sucesivas }
+
+\subsubsection{Escenario 1:(programa)}
 En este escenario se utiliza el programa para transcompilar el algoritmo de multiplicación por sumas sucesivas. La figura muestra el pseudo-código con la estructura \texttt{MIENTRAS} y el código LMC resultante generado por la herramienta. No se repite el contenido en texto para evitar duplicidad.
 
 \begin{figure}[H]
@@ -239,7 +248,7 @@ En este escenario se utiliza el programa para transcompilar el algoritmo de mult
   \caption{Escenario 1 (programa): pseudo-código con bucle \texttt{MIENTRAS} y salida LMC generada automáticamente.}
 \end{figure}
 
-\subsection{Escenario 2: Multiplicación por sumas sucesivas (manual optimizado)}
+\subsubsection{Escenario 2: (manual optimizado)}
 La siguiente figura muestra una versión manual optimizada del mismo algoritmo. Es más eficiente porque simplifica la condición del bucle: en lugar de evaluar con instrucciones adicionales (\texttt{SUB CTE0} y un salto extra), asume que \texttt{Y} nunca será negativa y usa directamente \texttt{LDA Y} seguido de \texttt{BRZ FIN}. Esto elimina trabajo innecesario en cada iteración y reduce ciclos.
 
 \begin{figure}[H]
@@ -248,45 +257,53 @@ La siguiente figura muestra una versión manual optimizada del mismo algoritmo. 
   \caption{Escenario 2 (manual optimizado): condición del bucle simplificada, menos saltos por iteración.}
 \end{figure}
 
-\subsection{Tabla de eficiencia}
+\section{Análisis Comparativo}
+\subsection{Multiplicación por sumas sucesivas}
+
+En esta sección se evalúa el desempeño del algoritmo de multiplicación por sumas sucesivas, comparando el código generado por el transpilador frente a la versión optimizada manualmente.
+
+\subsubsection{Cambios entre Códigos}
+La diferencia fundamental reside en la gestión del flujo de control y la limpieza de variables:
+\begin{itemize}
+    \item \textbf{Reducción de Saltos:} El transpilador usa dos evaluaciones (\texttt{BRZ} y \texttt{BRP}) en cada iteración. El optimizado solo usa una (\texttt{BRZ}), eliminando un salto condicional por cada vuelta del bucle.
+    \item \textbf{Inicialización de Variables:} El código optimizado incluye \texttt{LDA CTE0} y \texttt{STA P} al inicio. Esto garantiza que el acumulador $P$ empiece en cero, evitando errores de persistencia de datos.
+    \item \textbf{Eficiencia en el Acumulador:} El código optimizado evita recargar datos innecesariamente desde la memoria, aprovechando mejor el valor que ya reside en el acumulador durante la ejecución.
+\end{itemize}
+
+\subsubsection{Tabla Comparativa de Eficiencia}
+A continuación se presentan los datos obtenidos de las pruebas de ejecución para $X=7$ con diferentes multiplicadores ($Y$):
+
 \begin{table}[H]
 \centering
-\caption{Comparación de eficiencia: transpilador vs. manual optimizado}
-\begin{tabular}{|l|l|c|c|l|}
+\caption{Eficiencia: Transpilador vs. Optimizado ($X=7$)}
+\begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Algoritmo} & \textbf{Escenario} & \textbf{Instrucciones} & \textbf{Ciclos F-D-E} & \textbf{Observaciones} \\
-\hline
-Multiplicación & Transpilador & \\ & \\ & Usa sumas sucesivas \\
-\hline
-Multiplicación & Manual Opt. & \\ & \\ & Reutiliza acumulador, menos saltos \\
-\hline
-Fibonacci & Transpilador & \\ & \\ & Implementación directa \\
-\hline
-Fibonacci & Manual Opt. & \\ & \\ & Menos \texttt{DAT}/saltos \\
-\hline
+\textbf{Operación} & \textbf{Ciclos FDE (Transp.)} & \textbf{Ciclos FDE (Opt.)} & \textbf{Diferencia} & \textbf{Mejora \%} \\ \hline
+$7 \times 0$ & 10 & 11 & -1 & -10.0\% \\ \hline
+$7 \times 1$ & 21 & 20 & +1 & 4.7\% \\ \hline
+$7 \times 5$ & 65 & 56 & +9 & 13.8\% \\ \hline
+$7 \times 25$ & 285 & 236 & +49 & 17.2\% \\ \hline
 \end{tabular}
 \end{table}
 
-\noindent Llenar la tabla con métricas recogidas del simulador (contadores de pasos e inspección de ejecución).
-
+\subsubsection{Análisis de Resultados y Ejecución}
+\begin{itemize}
+    \item \textbf{Impacto de la Inicialización:} En el caso $7 \times 0$, el código optimizado es un ciclo más lento debido al "costo fijo" de inicializar la variable $P$ a cero. Sin embargo, esto asegura la integridad del resultado.
+    \item \textbf{Ganancia Escalar:} La eficiencia del código optimizado es proporcional al valor del multiplicador ($Y$). Por cada incremento en $Y$, el código optimizado ahorra aproximadamente 2 ciclos adicionales frente al transpilador.
+    \item \textbf{Rendimiento en Bucles Largos:} En operaciones como $7 \times 25$, la mejora del 17.2\% demuestra que una estructura de bucle más simple reduce significativamente la carga de trabajo del procesador LMC.
+\end{itemize}
 \section{Discusión}
-El código generado por el transpilador prioriza claridad y generalidad, lo que puede introducir saltos adicionales y temporales. La versión manual optimizada suele reducir instrucciones y ciclos al explotar invariantes, reordenar operaciones y minimizar accesos a memoria (\texttt{STA}/\texttt{LDA}). Estos resultados evidencian la relación entre el modelo de ejecución LMC y la eficiencia observada.
+ANADIR
 
 \section{Conclusiones}
 \begin{itemize}
-  \item Se implementó un transpilador funcional de pseudo-código a LMC, validado en simuladores web.
-  \item La comparación transpilador vs. optimizado muestra diferencias medibles en instrucciones y ciclos.
-  \item El ejercicio refuerza conceptos de Von Neumann y del ciclo F-D-E, así como el impacto de decisiones de diseño a bajo nivel.
+
 \end{itemize}
 
-\section*{Trabajo Futuro}
-Extender el lenguaje fuente (bucles \texttt{MIENTRAS}, variables múltiples en una línea), optimizaciones simples (propagación de constantes, eliminación de saltos redundantes) y soporte de comentarios/errores detallados en el parser.
+\section*{Recomendaciones}
+Final
 
 \section*{Referencias}
-\begin{itemize}
-  \item P. J. Higginson, ``Little Man Computer Simulator'', 101computing.net.
-  \item D. Page, ``The Little Man Computer'', University of York.
-  \item J. von Neumann, ``First Draft of a Report on the EDVAC'', 1945.
-\end{itemize}
+
 
 \end{document}
