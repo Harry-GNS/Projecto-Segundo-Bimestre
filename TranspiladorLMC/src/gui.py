@@ -45,6 +45,10 @@ class VentanaPrincipal(QMainWindow):
         self.generate_btn.setDefault(True)
         self.generate_btn.clicked.connect(self.generar)
 
+        # Guardar contenido del output (editable)
+        self.save_output_btn = QPushButton("Guardar LMC")
+        self.save_output_btn.clicked.connect(self.guardar_output)
+
         # Destino de guardado
         self.dest_combo = QComboBox()
         self.dest_combo.addItems(["Harry", "Juan", "Anthony", "Luis"])
@@ -56,12 +60,13 @@ class VentanaPrincipal(QMainWindow):
         top_bar.addWidget(QLabel("Guardar en:"))
         top_bar.addWidget(self.dest_combo)
         top_bar.addWidget(self.generate_btn)
+        top_bar.addWidget(self.save_output_btn)
 
         # Editors in splitter
         self.input_edit = QPlainTextEdit()
         self.input_edit.setPlaceholderText("Escribe tu pseudo-código aquí o carga un archivo .txt...")
         self.output_edit = QPlainTextEdit()
-        self.output_edit.setReadOnly(True)
+        self.output_edit.setReadOnly(False)
         self.output_edit.setPlaceholderText("Código LMC generado")
 
         splitter = QSplitter(Qt.Horizontal)
@@ -129,6 +134,26 @@ class VentanaPrincipal(QMainWindow):
             self.status.showMessage(f"Generado y guardado en: {out_path}", 5000)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al generar LMC:\n{e}")
+
+    def guardar_output(self):
+        # Guarda el contenido actual del panel de salida, permitiendo ediciones manuales
+        lmc_text = self.output_edit.toPlainText().strip()
+        if not lmc_text:
+            QMessageBox.warning(self, "Vacío", "No hay contenido LMC para guardar.")
+            return
+        try:
+            asegurar_directorio(self.carpeta_salida())
+            base = self.output_name_edit.text().strip()
+            if not base:
+                if self.current_input_path:
+                    base = os.path.splitext(os.path.basename(self.current_input_path))[0]
+                else:
+                    base = f"manual_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            out_path = os.path.join(self.carpeta_salida(), f"{base}.lmc")
+            escribir_texto(out_path, lmc_text)
+            self.status.showMessage(f"Guardado en: {out_path}", 5000)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo guardar el LMC:\n{e}")
 
 
 def run():
