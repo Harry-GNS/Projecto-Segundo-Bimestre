@@ -29,6 +29,8 @@ def _recolectar_simbolos(operaciones: List[Dict[str, Any]]) -> Tuple[set, Dict[i
             if op.get("op") == "*":
                 # Temporal para multiplicación y constantes 0 y 1
                 conjunto_vars.add("TMPMUL")
+                # Temporal adicional para valor del multiplicando cuando destino == izquierda
+                conjunto_vars.add("TMPMULVAL")
                 if 0 not in constantes:
                     constantes[0] = "CTE0"
                 if 1 not in constantes:
@@ -92,6 +94,11 @@ def _gen_multiplicacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[
         constantes[1] = "CTE1"
 
     tmp = "TMPMUL"
+    # Si el destino es el mismo que el multiplicando, copiar el multiplicando a TMPMULVAL
+    # para evitar perder su valor cuando inicializamos destino a 0.
+    mul_src = izq
+    if destino == izq:
+        mul_src = "TMPMULVAL"
     # Etiquetas únicas
     idx = _gen_op._ix_etq
     etq_loop = f"MULT{idx}"
@@ -99,6 +106,10 @@ def _gen_multiplicacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[
     _gen_op._ix_etq += 1
 
     lineas: List[str] = []
+    # Si se requiere, guardar el multiplicando original en TMPMULVAL
+    if mul_src == "TMPMULVAL":
+        lineas.append(f"LDA {izq}")
+        lineas.append(f"STA TMPMULVAL")
     # destino = 0
     lineas.append(f"LDA {constantes[0]}")
     lineas.append(f"STA {destino}")
@@ -109,7 +120,7 @@ def _gen_multiplicacion(op: Dict[str, Any], constantes: Dict[int, str]) -> List[
     lineas.append(f"{etq_loop} LDA {tmp}")
     lineas.append(f"BRZ {etq_fin}")
     lineas.append(f"LDA {destino}")
-    lineas.append(f"ADD {izq}")
+    lineas.append(f"ADD {mul_src}")
     lineas.append(f"STA {destino}")
     lineas.append(f"LDA {tmp}")
     lineas.append(f"SUB {constantes[1]}")
