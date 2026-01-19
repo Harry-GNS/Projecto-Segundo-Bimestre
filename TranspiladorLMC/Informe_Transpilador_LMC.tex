@@ -257,6 +257,36 @@ La siguiente figura muestra una versión manual optimizada del mismo algoritmo. 
   \caption{Escenario 2 (manual optimizado): condición del bucle simplificada, menos saltos por iteración.}
 \end{figure}
 
+\subsection{Factorial}
+
+\subsubsection{Escenario 1:(programa)}
+
+Este código está implementando el programa para transformar de un pseudo código a un código en 
+lenguaje de ensamblador, el código calcula el factorial de un número N. En la imagen se visualiza el 
+pseudo código y el resultado del lenguaje ensamblador, el código lee el valor de entrada N y se inicializa 
+la variable fact en 1. Luego se ejecuta un ciclo que se repite mientras N sea superior a 0, donde en cada 
+iteración se realiza un ciclo de suma repetidas. Por cada iteración el valor de N disminuye en 1, de forma 
+que al instante que llega a 0, el código imprime el valor obtenido a hasta llegar a 0.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{arquifinal5.png}
+
+\end{figure}
+
+
+\subsubsection{Escenario 2:(manual optimizado)}
+El código optimizado lo que busca es reducir la cantidad de líneas de código sin afectar el resultado, en 
+este caso el código sufrió modificaciones en el apartado de mejorar la eficiencia al reducir accesos 
+innecesarios a memoria y reutilizar valores que se encontraban en el acumulador. De igual forma, se 
+remplaza las variables temporales TMPUL y TMULVAL por variables fijas TMP y ACC. De esta forma 
+el código es más claro y compacto manteniendo el mismo funcionamiento. 
+
+  \includegraphics[width=0.95\textwidth]{arquifinal6.png}
+
+
+
+
 \section{Análisis Comparativo}
 \subsection{Multiplicación por sumas sucesivas}
 
@@ -291,19 +321,74 @@ $7 \times 25$ & 285 & 236 & +49 & 17.2\% \\ \hline
     \item \textbf{Impacto de la Inicialización:} En el caso $7 \times 0$, el código optimizado es un ciclo más lento debido al "costo fijo" de inicializar la variable $P$ a cero. Sin embargo, esto asegura la integridad del resultado.
     \item \textbf{Ganancia Escalar:} La eficiencia del código optimizado es proporcional al valor del multiplicador ($Y$). Por cada incremento en $Y$, el código optimizado ahorra aproximadamente 2 ciclos adicionales frente al transpilador.
     \item \textbf{Rendimiento en Bucles Largos:} En operaciones como $7 \times 25$, la mejora del 17.2\% demuestra que una estructura de bucle más simple reduce significativamente la carga de trabajo del procesador LMC.
+\subsection{Multiplicación por sumas sucesivas}
+
+\subsubsection{Tabla comparativa de eficiencia}
+
+En esta sección se presentan los resultados obtenidos al comparar el código transpilado con el código optimizado,
+utilizando como referencia el número de ciclos FDE ejecutados para distintos valores de entrada.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Datos (N)} & \textbf{Ciclos FDE (Transp.)} & \textbf{Ciclos FDE (Opt.)} & \textbf{Diferencia} & \textbf{Mejora \%} \\
+\hline
+2 & 64  & 62  & 2 & 3,13\% \\
+4 & 155 & 151 & 4 & 2,58\% \\
+5 & 214 & 209 & 5 & 2,34\% \\
+6 & 282 & 276 & 6 & 2,13\% \\
+\hline
+\end{tabular}
+\caption{Comparación de ciclos FDE entre el código transpilado y optimizado}
+\end{table}
+
+\subsubsection{Impacto de la inicialización}
+
+Para valores pequeños de entrada, como $N = 2$, el código optimizado presenta una mejora limitada.
+Esto se debe al costo fijo asociado a la inicialización de variables auxiliares necesarias para el cálculo.
+No obstante, dicha inicialización es indispensable para garantizar la correcta acumulación del resultado
+durante el cálculo del factorial del número seleccionado.
+
+\subsubsection{Ganancia escalar}
+
+La eficiencia del código optimizado aumenta conforme crece el valor de $N$.
+A medida que se incrementa el número de iteraciones del bucle de multiplicación,
+el ahorro relativo de ciclos FDE frente al código transpilado se mantiene estable,
+demostrando que la optimización es más efectiva en escenarios de mayor carga computacional.
+
+\subsubsection{Rendimiento en bucles anidados}
+
+Para valores mayores como $N = 5$ y $N = 6$, la reducción de instrucciones dentro del bucle interno
+disminuye la carga del procesador LMC.
+Esto se traduce en una reducción sostenida del número total de ciclos FDE ejecutados,
+confirmando que el código optimizado ofrece un mejor rendimiento en estructuras de bucles anidados.
+
 \end{itemize}
-\section{Discusión}
-ANADIR
 
 \section{Conclusiones}
 \begin{itemize}
-
+  \item El transpilador cumple su objetivo de traducir pseudo-código educativo a ensamblador LMC estándar de forma consistente.
+  \item La arquitectura modular facilitó el desarrollo y la separación de responsabilidades entre análisis, generación y presentación.
+  \item Las operaciones básicas se traducen de forma eficiente; en multiplicación y división se usan sumas y restas sucesivas, correctas pero no óptimas en ciclos.
+  \item El análisis comparativo muestra que optimizaciones simples en el control de flujo reducen el número total de ciclos, especialmente en bucles largos.
+  \item La interfaz gráfica mejora la usabilidad y permite generar y guardar programas LMC sin usar la línea de comandos.
+  \item El proyecto refuerza conceptos como el ciclo FDE y la relación entre diseño de alto nivel y ensamblador.
+  \item Las limitaciones actuales incluyen cobertura parcial de estructuras de control y ausencia de optimizaciones avanzadas.
 \end{itemize}
 
-\section*{Recomendaciones}
-Final
+\section{Recomendaciones}
+\begin{itemize}
+  \item Ampliar el lenguaje de entrada con más estructuras de control y operadores.
+  \item Incorporar un módulo de optimización que reduzca cargas redundantes y saltos innecesarios.
+  \item Añadir pruebas automatizadas para asegurar la correcta generación de código.
+  \item Mejorar los mensajes de error del parser.
+  \item Extender la interfaz gráfica con métricas de instrucciones y ciclos.
+\end{itemize}
 
-\section*{Referencias}
+  \section{Referencias}
+  \begin{thebibliography}{9}
+  \bibitem{lmc101} 101 Computing. ``Little Man Computer (LMC) Simulator''. Disponible en: \url{https://101computing.net/LMC/}. Accedido: enero 2026.
 
 
 \end{document}
