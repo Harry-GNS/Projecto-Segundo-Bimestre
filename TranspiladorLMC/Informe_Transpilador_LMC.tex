@@ -234,7 +234,7 @@ Medir ciclos del ciclo \emph{Fetch-Decode-Execute} y el número de instrucciones
 \begin{itemize}
   \item Multiplicación por sumas sucesivas.
   \item Sucesión de Fibonacci (versión iterativa básica).
-  \item Otros de otros integrantes etc
+  \item Conjetura de Collatz
 \end{itemize}
 
 \subsection{ Multiplicación por sumas sucesivas }
@@ -284,8 +284,27 @@ el código es más claro y compacto manteniendo el mismo funcionamiento.
 
   \includegraphics[width=0.95\textwidth]{arquifinal6.png}
 
+  
+\subsection{ Conjetura de Collatz }
 
+\subsubsection{Escenario 1:(programa)}
+En este escenario se implementa el algoritmo de la Conjetura de Collatz solicitando un número inicial al usuario para someterlo a un bucle que se repite mientras el valor sea mayor a 1. 
+En cada ciclo, el código utiliza una combinación de división y multiplicación para simular el operador módulo  y determinar si el número es par o impar; dependiendo del resultado, 
+divide el número entre 2 o lo multiplica por 3 y le suma 1, imprimiendo cada paso para demostrar cómo logra gestionar la aritmética compleja y  el flujo de control anidado hasta reducir cualquier valor al valor final 1.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{}
+  \caption{Escenario 1 (programa): pseudo-código y salida LMC generada automáticamente para la Conjetura de Collatz.}
+\end{figure}
 
+\subsubsection{Escenario 2: (manual optimizado)}
+En este escenario se presenta una versión optimizada del algoritmo de la Conjetura de Collatz. El código optimizado reduce la cantidad de instrucciones y ciclos necesarios para realizar las operaciones aritméticas y el control de flujo.
+Se eliminan variables temporales innecesarias y se reutilizan valores en el acumulador para minimizar accesos a memoria, lo que resulta en un código más eficiente sin comprometer la funcionalidad original.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{}
+  \caption{Escenario 2 (manual optimizado): versión optimizada del código LMC para la Conjetura de Collatz.}
+\end{figure}
 
 \section{Análisis Comparativo}
 \subsection{Multiplicación por sumas sucesivas}
@@ -364,6 +383,36 @@ disminuye la carga del procesador LMC.
 Esto se traduce en una reducción sostenida del número total de ciclos FDE ejecutados,
 confirmando que el código optimizado ofrece un mejor rendimiento en estructuras de bucles anidados.
 
+\subsection{Conjetura de Collatz}
+
+\subsubsection{Cambios entre Códigos}
+ \item \textbf{Optimización de Multiplicación:} El código generado crea un bucle iterativo genérico y costoso para $N * 3$, mientras que el optimizado lo sustituye por tres instrucciones inmediatas de suma, eliminando toda la sobrecarga de control.
+ \item \textbf{Fusión de División y Módulo:} El generado necesita dividir, volver a multiplicar y restar solo para verificar si es par, mientras que el optimizado verifica la paridad y calcula la división simultáneamente en un único bucle de restas.
+ \item \textbf{Uso de Memoria y Registros:} El generado satura la memoria con variables temporales para cada operación intermedia (TMPMUL, TMPDIV), mientras que el optimizado mantiene los datos en el registro Acumulador, reduciendo drásticamente las instrucciones de guardado (STA) y carga (LDA).
+
+\subsubsection{Tabla comparativa de eficiencia}
+En esta sección se presentan los resultados obtenidos al comparar el código transpilado con el código optimizado,
+utilizando como referencia el número de ciclos FDE ejecutados para distintos valores de entrada.
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Datos (N)} & \textbf{Ciclos FDE (Transp.)} & \textbf{Ciclos FDE (Opt.)} & \textbf{Diferencia} & \textbf{Mejora \%} \\
+\hline
+3 & 802 & 288 & 514 & 3,57\% \\
+4 & 154 & 49 & 105 & 3,22\% \\
+8 & 275 & 96 & 179 & 3,32\% \\
+6 & 906 & 326 & 580 & 3,13\% \\
+\hline
+\end{tabular}
+\caption{Comparación de ciclos FDE entre el código transpilado y optimizado}
+\end{table}
+
+\subsubsection{Análisis de Resultados y Ejecución}
+\begin{itemize}
+    \item \textbf{Impacto de la Optimización:} El código optimizado reduce drásticamente los ciclos FDE en comparación con el generado, especialmente en operaciones de multiplicación y división, que son costosas en LMC.
+    \item \textbf{Ganancia Escalar:} La mejora porcentual se mantiene consistente alrededor del 3.2\% a 3.5\%, indicando que las optimizaciones aplicadas son efectivas independientemente del valor inicial de $N$.
+    \item \textbf{Rendimiento en Bucles Anidados:} Dado que la Conjetura de Collatz puede implicar múltiples iteraciones y operaciones aritméticas complejas, las optimizaciones en el manejo de multiplicación y división tienen un impacto significativo en la reducción total de ciclos FDE.
 \end{itemize}
 
 \section{Conclusiones}
