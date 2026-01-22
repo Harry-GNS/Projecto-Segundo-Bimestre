@@ -284,7 +284,27 @@ el código es más claro y compacto manteniendo el mismo funcionamiento.
 
   \includegraphics[width=0.95\textwidth]{arquifinal6.png}
 
+\subsection{División por restas sucesivas}
 
+\subsubsection{Escenario 1: (programa)}
+En este escenario se evalúa el comportamiento del transpilador ante operaciones que requieren una lógica de control de flujo basada en comparaciones relacionales ($>=$). El código generado (Figura \ref{fig:div_prog}) implementa la división entera mediante la sustracción cíclica del divisor sobre el dividendo. Para asegurar la compatibilidad con el modelo de Von Neumann, el transpilador genera instrucciones \texttt{STA} dentro del bucle para actualizar el estado de la memoria RAM tras cada resta[cite: 38, 47]. Esta estrategia garantiza que, al cumplirse la condición de salida, el residuo final esté almacenado correctamente. Sin embargo, el uso de saltos condicionales dobles (\texttt{BRZ} y \texttt{BRP}) para emular la condición de "mayor o igual" incrementa la latencia del ciclo de instrucción en comparación con una implementación manual optimizada[cite: 71, 216].
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{arquifinal8.png}
+    \caption{Escenario 1 (programa): Pseudo-código de división y generación automática de mnemónicos LMC.}
+    \label{fig:div_prog}
+\end{figure}
+
+\subsubsection{Escenario 2: (manual optimizado)}
+La versión manual optimizada (Figura \ref{fig:div_manual}) refina la ejecución al simplificar el arbitraje del bus de control. En lugar de realizar una verificación de dos pasos para la condición del bucle, se aprovecha la propiedad del acumulador de conservar el resultado de la resta anterior para decidir el salto mediante un único mnemónico \texttt{BRP}[cite: 302, 315]. Esto reduce significativamente las fases de \emph{Fetch} y \emph{Decode} por cada iteración del algoritmo. Al minimizar el tráfico de datos entre la ALU y la memoria principal, se logra una ejecución más fluida que disminuye el número total de ciclos de reloj ejecutados, demostrando que una gestión inteligente de los registros internos del LMC puede compensar las limitaciones de velocidad del bus compartido[cite: 309, 310, 316].
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{arquifinal9.png}
+    \caption{Escenario 2 (manual optimizado): Implementación eficiente de la división con reducción de accesos a memoria.}
+    \label{fig:div_manual}
+\end{figure}
 
 
 \section{Análisis Comparativo}
@@ -364,7 +384,42 @@ disminuye la carga del procesador LMC.
 Esto se traduce en una reducción sostenida del número total de ciclos FDE ejecutados,
 confirmando que el código optimizado ofrece un mejor rendimiento en estructuras de bucles anidados.
 
+\subsection{División por restas sucesivas}
+
+En esta sección se evalúa el desempeño del algoritmo de división por restas sucesivas, comparando el código generado automáticamente por el transpilador frente a la versión optimizada manualmente para el simulador LMC.
+
+\subsubsection{Cambios entre Códigos}
+La optimización manual se enfoca en la reducción de la sobrecarga del ciclo de instrucción y la gestión eficiente de la memoria RAM:
+\begin{itemize}
+    \item \textbf{Simplificación de la Lógica de Salto:} El transpilador implementa la condición \texttt{>=} utilizando un esquema de salto doble (\texttt{BRZ} y \texttt{BRP}) para cubrir ambos casos de la desigualdad. La versión manual optimizada reduce esto a un único mnemónico \texttt{BRP}, aprovechando el estado del acumulador tras la sustracción.
+    \item \textbf{Reducción de Ciclos de Carga:} El código generado realiza instrucciones \texttt{LDA} (Load) redundantes para refrescar el acumulador antes de cada operación aritmética. El código optimizado mantiene el valor en el acumulador el mayor tiempo posible, disminuyendo significativamente el tráfico en el bus de datos.
+    \item \textbf{Gestión del Residuo:} Mientras el transpilador guarda el estado en cada iteración para garantizar la integridad de los datos, el código manual solo realiza el \texttt{STA} (Store) final del residuo una vez que la condición de bucle deja de cumplirse, ahorrando ciclos de escritura innecesarios.
 \end{itemize}
+
+\subsubsection{Tabla Comparativa de Eficiencia}
+A continuación se presentan los datos de rendimiento obtenidos al dividir un dividendo fijo ($21$) por diferentes divisores ($Y$):
+
+\begin{table}[H]
+\centering
+\caption{Eficiencia en División: Transpilador vs. Optimizado ($Dividendo = 21$)}
+\label{tab:eficiencia_division}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Operación} & \textbf{Ciclos FDE (Transp.)} & \textbf{Ciclos FDE (Opt.)} & \textbf{Diferencia} & \textbf{Mejora \%} \\ \hline
+$21 \div 21$ & 24 & 22 & +2 & 8.3\% \\ \hline
+$21 \div 7$ & 48 & 40 & +8 & 16.7\% \\ \hline
+$21 \div 3$ & 96 & 76 & +20 & 20.8\% \\ \hline
+$21 \div 1$ & 264 & 202 & +62 & 23.5\% \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Análisis de Resultados y Ejecución}
+\begin{itemize}
+    \item \textbf{Impacto de la Inicialización:} Al igual que en la multiplicación, existe un "costo fijo" inicial para definir el \texttt{COCIENTE} en cero. En divisiones donde el divisor es grande (pocas iteraciones), la mejora porcentual es menor debido a que este costo inicial representa una fracción mayor del tiempo total de ejecución.
+    \item \textbf{Ganancia Escalar por Iteración:} La eficiencia del código optimizado aumenta significativamente a medida que el divisor disminuye (y por ende, el cociente aumenta). Por cada iteración del bucle de resta, el código optimizado ahorra aproximadamente 3 ciclos FDE al eliminar instrucciones de carga y saltos redundantes.
+    \item \textbf{Rendimiento y Latencia:} Para operaciones largas como $21 \div 1$, la mejora superior al 23\% demuestra que la reducción de fases de \emph{Fetch} y \emph{Decode} en el bucle principal es crítica para optimizar el rendimiento en arquitecturas con buses compartidos como el LMC.
+\end{itemize}
+
 
 \section{Conclusiones}
 \begin{itemize}
