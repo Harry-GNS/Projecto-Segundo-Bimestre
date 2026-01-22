@@ -1,0 +1,17 @@
+LEER N
+IMPRIMIR N
+MIENTRAS N > 1 HACER
+
+    MITAD = N / 2
+    PRUEBA = MITAD * 2
+    RESTO = N - PRUEBA
+    
+    SI RESTO = 0 ENTONCES
+        N = N / 2
+    SINO
+        N = N * 3
+        N = N + 1
+    FIN SI
+    
+    IMPRIMIR N
+FIN MIENTRAS
